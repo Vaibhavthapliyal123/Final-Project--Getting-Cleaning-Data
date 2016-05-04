@@ -1,0 +1,48 @@
+library(dplyr)
+
+                        
+#load activity features+labels
+
+activityLabels<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/activity_labels.txt")
+activityLabels[,2]<-as.character(activityLabels[,2])
+activityLabels
+
+
+features<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/features.txt")
+features[,2]<-as.character(features[,2])
+
+#extract only the data on mean and standard deviation
+
+featuresWanted <- grep(".*mean.*|.*std.*", features[,2])
+featuresWanted.names <- features[featuresWanted,2]
+featuresWanted.names = gsub('-mean', 'Mean', featuresWanted.names)
+featuresWanted.names = gsub('-std', 'Std', featuresWanted.names)
+featuresWanted.names <- gsub('[-()]', '', featuresWanted.names)
+
+#load the dataset
+train<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/train/X_train.txt")[featuresWanted]
+View(train)
+trainActivity<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/train/y_train.txt")
+trainSubjects<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/train/subject_train.txt")
+train<-cbind(trainSubjects,trainActivity,train)
+
+testSubjects<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/test/subject_test.txt")
+test<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/test/X_test.txt")[featuresWanted]
+testActivity<-read.table("C:/Users/vaibhav/Desktop/R work/DataCleaning/UCI HAR Dataset/test/y_test.txt")
+test<-cbind(testSubjects,testActivity,test)
+
+#merge and add labels
+
+allData<-rbind(train,test)
+colnames(allData)<-c("subject","activity",featuresWanted.names)
+
+#turn activities and subject into factors
+allData$activity<-factor(allData$activity,levels = activityLabels[,1],labels = activityLabels[,2])
+allData$subject<-as.factor(allData$subject)
+
+allData.melted<-melt(allData,id=c("subject","activity"))
+allData.mean<-dcast(allData.melted,subject+activity~variable, mean)
+
+View(allData)
+
+write.table(allData.mean,"tidy.txt",row.names = FALSE,quote = FALSE)
